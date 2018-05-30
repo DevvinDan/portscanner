@@ -5,7 +5,7 @@ class PortScanner:
 
     """ Simple port scanner."""
 
-    def __init__(self, timeout=0):
+    def __init__(self, timeout=0.5):
         if timeout != 0:
             socket.setdefaulttimeout(timeout)
 
@@ -58,7 +58,11 @@ class PortScanner:
                 end = start
             except socket.gaierror:
                 parts = interval.split("-")
-                start, end = parts[0:2]
+                if len(parts) == 1:
+                    start = parts[0]
+                    end = start
+                else:
+                    start, end = parts[0:2]
             start = ip.ip_address(start)
             end = ip.ip_address(end)
             if start > end:
@@ -76,7 +80,16 @@ class PortScanner:
         port_string = str(port_string).replace(" ", "")
         port_intervals = port_string.split(",")
         for interval in port_intervals:
-            start, end = interval.split("-")[0:2]
+            try:
+                start = socket.getservbyname(interval)
+                end = start
+            except:
+                parts = interval.split("-")
+                if len(parts) == 1:
+                    start = parts[0]
+                    end = start
+                else:
+                    start, end = interval.split("-")[0:2]
             start = int(start)
             end = int(end)
             if start > end:

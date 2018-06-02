@@ -1,5 +1,6 @@
 import socket
 import ipaddress as ip
+from scapy.all import *
 
 class PortScanner:
 
@@ -9,9 +10,16 @@ class PortScanner:
         if timeout != 0:
             socket.setdefaulttimeout(timeout)
 
+        self.SYNACK_flags = 0x12
+        self.RSTACK_flags = 0x14
+
 
     def scan_port(self, ip, port):
-        """Checks if the specified port is available
+        """Checks if the specified port is available using TCP-scan
+
+        This method attempts to establish TCP-connection to specified IP/port, and,
+        if successfull, closes the connection
+
 
         :param ip: IP to check
         :param port: Port number to check
@@ -26,6 +34,37 @@ class PortScanner:
             return True
         else:
             return False
+
+    def scan_port_silent(self, ip, port):
+        """Checks if the specified port is availabe using SYN-scan
+
+        Sends SYN package to specified port. If SYN-ACK is recieved,
+        sends RST and returns True (port is open)
+
+        Uses scapy for package manipulation
+
+        Doesn't work for some interfaces, though
+
+        :param ip:
+        :param port:
+        :return:
+        """
+
+
+        ip = str(ip)
+        port = int(port)
+
+        source_port = RandShort()
+        package_response = sr1(IP(dst=ip)/TCP(sport=source_port,dport=port,flags="S"),timeout=10)
+        flags = package_response.getlayer(TCP).flags
+        RST_package = IP(dst=ip)/TCP(sport=source_port, dport=port, flags="R")
+        send(RST_package)
+        if flags == self.SYNACK_flags:
+            return True
+        else:
+            return False
+
+
 
     def get_service_name(self, port):
         """Attempts to get service name running on specified port from /etc/services/
@@ -49,22 +88,29 @@ class PortScanner:
         :param ip_string: String containing interval like "127.0.0.1 - 128.0.0.1"
         :return: Object generating sequence of IP addresses in specified range
         """
-
         ip_string = str(ip_string).replace(" ", "")
         ip_intervals = ip_string.split(",")
         for interval in ip_intervals:
             try:
-                start = socket.gethostbyname(interval)
-                end = start
+                # try to resolve name
+                start = ip.ip_address(socket.gethostbyname(interval))
+                end = ip.ip_address(start)
+
             except socket.gaierror:
-                parts = interval.split("-")
-                if len(parts) == 1:
-                    start = parts[0]
-                    end = start
-                else:
-                    start, end = parts[0:2]
-            start = ip.ip_address(start)
-            end = ip.ip_address(end)
+                # try to resolve it as ip/mask
+                try:
+                    network = ip.ip_interface(interval).network
+                    start = ip.ip_address(network.network_address + 1)
+                    end = ip.ip_address(network.network_address + network.num_addresses - 2)
+                except:
+                    parts = interval.split("-")
+                    if len(parts) == 1:
+                        start = parts[0]
+                        end = start
+                    else:
+                        start, end = parts[0:2]
+                    start = ip.ip_address(start)
+                    end = ip.ip_address(end)
             if start > end:
                 raise ValueError
             while start <= end:
@@ -81,25 +127,37 @@ class PortScanner:
         port_intervals = port_string.split(",")
         for interval in port_intervals:
             try:
-                start = socket.getservbyname(interval)
+                start = socket.getservbyname(interval.lower())
                 end = start
             except:
-                parts = interval.split("-")
-                if len(parts) == 1:
-                    start = parts[0]
+                try:
+                    start = int(interval)
                     end = start
-                else:
-                    start, end = interval.split("-")[0:2]
-            start = int(start)
-            end = int(end)
+                except:
+                    parts = interval.split("-")
+                    if len(parts) == 1:
+                        start = parts[0]
+                        end = start
+                    else:
+                        start, end = interval.split("-")[0:2]
+                start = int(start)
+                end = int(end)
             if start > end:
                 raise ValueError
-            if not ((0 <= start <= 65535) or (0 <= end <= 65535)):
+            if not ((0 <= start <= 65535) and (0 <= end <= 65535)):
                 raise ValueError
             while start <= end:
                 yield start
                 start += 1
 
+
+    def set_timeout(self, timeout):
+        try:
+            timeout = float(timeout)
+            if timeout > 0:
+                socket.setdefaulttimeout(timeout)
+        except:
+            print("Can't set timeout")
 
     def get_subnet_addresses(self, ip_address, mask):
         """Takes ip address and mask and returns range of all addresses in network
@@ -111,12 +169,5 @@ class PortScanner:
         ip_interface = ip.ip_interface(ip_address + "/" + mask)
         return ip_interface.network.hosts()
 
-    def scan(self, ip_range, port_range):
-        """Scans ports specified in port_range for every IP in ip_range
 
-        :param ip_range:
-        :param port_range:
-        :return: dictionary of IP values
-        """
-
-        pass
+scanner = PortScanner()

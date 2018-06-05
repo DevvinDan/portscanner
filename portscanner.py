@@ -1,6 +1,5 @@
 import socket
 import ipaddress as ip
-from scapy.all import *
 
 class PortScanner:
 
@@ -9,9 +8,6 @@ class PortScanner:
     def __init__(self, timeout=0.5):
         if timeout != 0:
             socket.setdefaulttimeout(timeout)
-
-        self.SYNACK_flags = 0x12
-        self.RSTACK_flags = 0x14
 
 
     def scan_port(self, ip, port):
@@ -31,35 +27,6 @@ class PortScanner:
         result = sock.connect_ex((str(ip), int(port)))
         sock.close()
         if result == 0:
-            return True
-        else:
-            return False
-
-    def scan_port_silent(self, ip, port):
-        """Checks if the specified port is availabe using SYN-scan
-
-        Sends SYN package to specified port. If SYN-ACK is recieved,
-        sends RST and returns True (port is open)
-
-        Uses scapy for package manipulation
-
-        Doesn't work for some interfaces, though
-
-        :param ip:
-        :param port:
-        :return:
-        """
-
-
-        ip = str(ip)
-        port = int(port)
-
-        source_port = RandShort()
-        package_response = sr1(IP(dst=ip)/TCP(sport=source_port,dport=port,flags="S"),timeout=10)
-        flags = package_response.getlayer(TCP).flags
-        RST_package = IP(dst=ip)/TCP(sport=source_port, dport=port, flags="R")
-        send(RST_package)
-        if flags == self.SYNACK_flags:
             return True
         else:
             return False

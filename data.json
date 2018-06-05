@@ -1,0 +1,18 @@
+{
+	"replies": {
+      "rus":{
+
+      },
+      "eng":{
+        "start": "Welcome to the Port Scanner!\n\nUse /set_ip [ip, ip1-ip2, domain_name, ip/mask...] to set scanning ip range\n\nUse /set_port [port, port1-port2, service_name...] to specify port\n\nUse /scan to start scanning\n\nUse /settimeout [value] to set scanning timeout",
+        "help": "Use /set_ip [ip, ip1-ip2, domain_name, ip/mask...] to set scanning ip range\n\nUse /set_port [port, port1-port2, service_name...] to specify port\n\nUse /scan to start scanning\n\nUse /settimeout [value] to set scanning timeout",
+        "exception_input": "Error. Wrong input.",
+        "exception_value": "An error occured during scanning.",
+        "exception_not_set": "Please, set ip and port to scan",
+        "scanning_template": "Port {} is open. Service: {}\n",
+        "scanning_completed_template": "\nScanning completed in {}\n",
+        "start_scanning_template": "Scanning address {}\n\n",
+        "exception_timeout": "Can't set timeout"
+      }
+    }
+}
